@@ -1,8 +1,10 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/url"
 
 	"github.com/gorilla/websocket"
@@ -44,14 +46,34 @@ func CreateHassClient(address string, token string) *HassClient {
 
 // Connects to the homeassistant instance and initiates authentication via token.
 // If this method returns without error, you are ready to execute commands to send or subscribe to events.
-//
 func (client *HassClient) Connect() error {
 	if client.authenticated {
 		return fmt.Errorf("already connected")
 	}
 
-	// TODO: add support for wss (secure websocket connections)
-	u := url.URL{Scheme: "ws", Host: client.address, Path: API_ENDPOINT}
+	u, err := url.Parse(client.address)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "", "http", "ws":
+		u.Scheme = "ws"
+		if u.Port() == "" {
+			u.Host = net.JoinHostPort(u.Host, "80")
+		}
+	case "https", "wss":
+		u.Scheme = "wss"
+		if u.Port() == "" {
+			u.Host = net.JoinHostPort(u.Host, "443")
+		}
+	default:
+		return errors.New("unknown scheme")
+	}
+	if u.Path == "" {
+		u.Path = API_ENDPOINT
+	}
+
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		return err
@@ -94,7 +116,7 @@ func (client *HassClient) listen() {
 		if msg.MessageType == string(msg_RESULT) {
 			cache, found := client.resultCache[msg.Id]
 			if !found {
-				fmt.Printf("ERROR: Got result message for unknown id: %d", msg.Id)
+				fmt.Printf("ERROR: Got result message for unknown id: %d\n", msg.Id)
 				continue
 			}
 			if cache.resultType == GetServicesResult {
