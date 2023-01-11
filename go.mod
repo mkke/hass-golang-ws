@@ -1,4 +1,4 @@
-module github.com/exceptionfault/hass-golang-ws
+module github.com/mkke/hass-golang-ws
 
 go 1.18
 

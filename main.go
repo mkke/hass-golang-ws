@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	hass "github.com/exceptionfault/hass-golang-ws/client"
+	hass "github.com/mkke/hass-golang-ws/client"
 )
 
 func main() {
